@@ -397,7 +397,7 @@ function loadUserData() {
 }
 
 // Form handlers
-function handleContactSubmit(e) {
+async function handleContactSubmit(e) {
     e.preventDefault();
     
     const contactData = {
@@ -409,44 +409,34 @@ function handleContactSubmit(e) {
         visitTime: document.getElementById('contact-time').value,
         status: document.getElementById('contact-status').value,
         notes: document.getElementById('contact-notes').value,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
+    // Add createdAt only for new records
+    if (!editingId) {
+        contactData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    }
+
     const userId = currentUser.uid;
     
-    if (editingId) {
-        // Update existing contact
-        db.collection('users').doc(userId).collection('contacts').doc(editingId)
-            .update(contactData)
-            .then(() => {
-                showNotification('Contact updated successfully!', 'success');
-                setTimeout(() => {
-                    closeModal();
-                }, 1500);
-            })
-            .catch(error => {
-                showNotification('Error updating contact: ' + error.message, 'error');
-                console.error("Error updating contact: ", error);
-            });
-    } else {
-        // Add new contact
-        db.collection('users').doc(userId).collection('contacts')
-            .add(contactData)
-            .then(() => {
-                showNotification('Contact added successfully!', 'success');
-                setTimeout(() => {
-                    closeModal();
-                }, 1500);
-            })
-            .catch(error => {
-                showNotification('Error adding contact: ' + error.message, 'error');
-                console.error("Error adding contact: ", error);
-            });
+    try {
+        if (editingId) {
+            // Update existing contact
+            await db.collection('users').doc(userId).collection('contacts').doc(editingId).update(contactData);
+            showNotification('Contact updated successfully!', 'success');
+        } else {
+            // Add new contact
+            await db.collection('users').doc(userId).collection('contacts').add(contactData);
+            showNotification('Contact added successfully!', 'success');
+        }
+        closeModal();
+    } catch (error) {
+        showNotification(`Error ${editingId ? 'updating' : 'adding'} contact: ${error.message}`, 'error');
+        console.error(`Error ${editingId ? 'updating' : 'adding'} contact: `, error);
     }
 }
 
-function handlePioneerSubmit(e) {
+async function handlePioneerSubmit(e) {
     e.preventDefault();
     
     const pioneerData = {
@@ -456,44 +446,34 @@ function handlePioneerSubmit(e) {
         studies: parseInt(document.getElementById('pioneer-studies').value) || 0,
         returnVisits: parseInt(document.getElementById('pioneer-return-visits').value) || 0,
         notes: document.getElementById('pioneer-notes').value,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
+    // Add createdAt only for new records
+    if (!editingId) {
+        pioneerData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    }
+
     const userId = currentUser.uid;
     
-    if (editingId) {
-        // Update existing record
-        db.collection('users').doc(userId).collection('pioneerRecords').doc(editingId)
-            .update(pioneerData)
-            .then(() => {
-                showNotification('Pioneer record updated successfully!', 'success');
-                setTimeout(() => {
-                    closeModal();
-                }, 1500);
-            })
-            .catch(error => {
-                showNotification('Error updating pioneer record: ' + error.message, 'error');
-                console.error("Error updating pioneer record: ", error);
-            });
-    } else {
-        // Add new record
-        db.collection('users').doc(userId).collection('pioneerRecords')
-            .add(pioneerData)
-            .then(() => {
-                showNotification('Pioneer record added successfully!', 'success');
-                setTimeout(() => {
-                    closeModal();
-                }, 1500);
-            })
-            .catch(error => {
-                showNotification('Error adding pioneer record: ' + error.message, 'error');
-                console.error("Error adding pioneer record: ", error);
-            });
+    try {
+        if (editingId) {
+            // Update existing record
+            await db.collection('users').doc(userId).collection('pioneerRecords').doc(editingId).update(pioneerData);
+            showNotification('Pioneer record updated successfully!', 'success');
+        } else {
+            // Add new record
+            await db.collection('users').doc(userId).collection('pioneerRecords').add(pioneerData);
+            showNotification('Pioneer record added successfully!', 'success');
+        }
+        closeModal();
+    } catch (error) {
+        showNotification(`Error ${editingId ? 'updating' : 'adding'} pioneer record: ${error.message}`, 'error');
+        console.error(`Error ${editingId ? 'updating' : 'adding'} pioneer record: `, error);
     }
 }
 
-function handlePublisherSubmit(e) {
+async function handlePublisherSubmit(e) {
     e.preventDefault();
     
     const publisherData = {
@@ -501,40 +481,30 @@ function handlePublisherSubmit(e) {
         studies: parseInt(document.getElementById('publisher-studies').value) || 0,
         participated: document.getElementById('publisher-participated').value === 'yes',
         notes: document.getElementById('publisher-notes').value,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
+    // Add createdAt only for new records
+    if (!editingId) {
+        publisherData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    }
+
     const userId = currentUser.uid;
     
-    if (editingId) {
-        // Update existing record
-        db.collection('users').doc(userId).collection('publisherRecords').doc(editingId)
-            .update(publisherData)
-            .then(() => {
-                showNotification('Publisher record updated successfully!', 'success');
-                setTimeout(() => {
-                    closeModal();
-                }, 1500);
-            })
-            .catch(error => {
-                showNotification('Error updating publisher record: ' + error.message, 'error');
-                console.error("Error updating publisher record: ", error);
-            });
-    } else {
-        // Add new record
-        db.collection('users').doc(userId).collection('publisherRecords')
-            .add(publisherData)
-            .then(() => {
-                showNotification('Publisher record added successfully!', 'success');
-                setTimeout(() => {
-                    closeModal();
-                }, 1500);
-            })
-            .catch(error => {
-                showNotification('Error adding publisher record: ' + error.message, 'error');
-                console.error("Error adding publisher record: ", error);
-            });
+    try {
+        if (editingId) {
+            // Update existing record
+            await db.collection('users').doc(userId).collection('publisherRecords').doc(editingId).update(publisherData);
+            showNotification('Publisher record updated successfully!', 'success');
+        } else {
+            // Add new record
+            await db.collection('users').doc(userId).collection('publisherRecords').add(publisherData);
+            showNotification('Publisher record added successfully!', 'success');
+        }
+        closeModal();
+    } catch (error) {
+        showNotification(`Error ${editingId ? 'updating' : 'adding'} publisher record: ${error.message}`, 'error');
+        console.error(`Error ${editingId ? 'updating' : 'adding'} publisher record: `, error);
     }
 }
 
