@@ -14,6 +14,12 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// Enable Firestore persistence
+db.enablePersistence()
+  .catch((err) => {
+    console.error("Firestore persistence error: ", err);
+  });
+
 // DOM Elements
 const authSection = document.getElementById('auth-section');
 const appSection = document.getElementById('app-section');
@@ -173,7 +179,12 @@ async function handleSignup() {
     const password = document.getElementById('password').value;
 
     try {
-        await auth.createUserWithEmailAndPassword(email, password);
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        // Create user document in Firestore
+        await db.collection('users').doc(userCredential.user.uid).set({
+            email: email,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
         showNotification('Account created successfully!', 'success');
         authMessage.textContent = '';
     } catch (error) {
@@ -187,7 +198,16 @@ async function handleGoogleAuth() {
     const provider = new firebase.auth.GoogleAuthProvider();
     
     try {
-        await auth.signInWithPopup(provider);
+        const result = await auth.signInWithPopup(provider);
+        // Create user document in Firestore if new user
+        const userDoc = await db.collection('users').doc(result.user.uid).get();
+        if (!userDoc.exists) {
+            await db.collection('users').doc(result.user.uid).set({
+                name: result.user.displayName,
+                email: result.user.email,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
         showNotification('Google login successful!', 'success');
     } catch (error) {
         showNotification(error.message, 'error');
@@ -199,7 +219,12 @@ async function handleGoogleAuth() {
 function handleGuestAuth() {
     // Sign in anonymously
     auth.signInAnonymously()
-        .then(() => {
+        .then((userCredential) => {
+            // Create a temporary user document
+            db.collection('users').doc(userCredential.user.uid).set({
+                isGuest: true,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
             showNotification('Guest session started', 'success');
             authMessage.textContent = '';
         })
@@ -367,6 +392,7 @@ function loadUserData() {
             renderContacts();
         }, error => {
             console.error("Error loading contacts: ", error);
+            showNotification("Error loading contacts", "error");
         });
 
     // Load pioneer records
@@ -380,6 +406,7 @@ function loadUserData() {
             renderPioneerRecords();
         }, error => {
             console.error("Error loading pioneer records: ", error);
+            showNotification("Error loading pioneer records", "error");
         });
 
     // Load publisher records
@@ -393,11 +420,12 @@ function loadUserData() {
             renderPublisherRecords();
         }, error => {
             console.error("Error loading publisher records: ", error);
+            showNotification("Error loading publisher records", "error");
         });
 }
 
 // Form handlers
-function handleContactSubmit(e) {
+async function handleContactSubmit(e) {
     e.preventDefault();
     
     const contactData = {
@@ -415,38 +443,28 @@ function handleContactSubmit(e) {
 
     const userId = currentUser.uid;
     
-    if (editingId) {
-        // Update existing contact
-        db.collection('users').doc(userId).collection('contacts').doc(editingId)
-            .update(contactData)
-            .then(() => {
-                showNotification('Contact updated successfully!', 'success');
-                setTimeout(() => {
-                    closeModal();
-                }, 1500);
-            })
-            .catch(error => {
-                showNotification('Error updating contact: ' + error.message, 'error');
-                console.error("Error updating contact: ", error);
-            });
-    } else {
-        // Add new contact
-        db.collection('users').doc(userId).collection('contacts')
-            .add(contactData)
-            .then(() => {
-                showNotification('Contact added successfully!', 'success');
-                setTimeout(() => {
-                    closeModal();
-                }, 1500);
-            })
-            .catch(error => {
-                showNotification('Error adding contact: ' + error.message, 'error');
-                console.error("Error adding contact: ", error);
-            });
+    try {
+        if (editingId) {
+            // Update existing contact
+            await db.collection('users').doc(userId).collection('contacts').doc(editingId)
+                .update(contactData);
+            showNotification('Contact updated successfully!', 'success');
+        } else {
+            // Add new contact
+            await db.collection('users').doc(userId).collection('contacts')
+                .add(contactData);
+            showNotification('Contact added successfully!', 'success');
+        }
+        setTimeout(() => {
+            closeModal();
+        }, 1500);
+    } catch (error) {
+        console.error("Error saving contact: ", error);
+        showNotification('Error saving contact: ' + error.message, 'error');
     }
 }
 
-function handlePioneerSubmit(e) {
+async function handlePioneerSubmit(e) {
     e.preventDefault();
     
     const pioneerData = {
@@ -462,38 +480,28 @@ function handlePioneerSubmit(e) {
 
     const userId = currentUser.uid;
     
-    if (editingId) {
-        // Update existing record
-        db.collection('users').doc(userId).collection('pioneerRecords').doc(editingId)
-            .update(pioneerData)
-            .then(() => {
-                showNotification('Pioneer record updated successfully!', 'success');
-                setTimeout(() => {
-                    closeModal();
-                }, 1500);
-            })
-            .catch(error => {
-                showNotification('Error updating pioneer record: ' + error.message, 'error');
-                console.error("Error updating pioneer record: ", error);
-            });
-    } else {
-        // Add new record
-        db.collection('users').doc(userId).collection('pioneerRecords')
-            .add(pioneerData)
-            .then(() => {
-                showNotification('Pioneer record added successfully!', 'success');
-                setTimeout(() => {
-                    closeModal();
-                }, 1500);
-            })
-            .catch(error => {
-                showNotification('Error adding pioneer record: ' + error.message, 'error');
-                console.error("Error adding pioneer record: ", error);
-            });
+    try {
+        if (editingId) {
+            // Update existing record
+            await db.collection('users').doc(userId).collection('pioneerRecords').doc(editingId)
+                .update(pioneerData);
+            showNotification('Pioneer record updated successfully!', 'success');
+        } else {
+            // Add new record
+            await db.collection('users').doc(userId).collection('pioneerRecords')
+                .add(pioneerData);
+            showNotification('Pioneer record added successfully!', 'success');
+        }
+        setTimeout(() => {
+            closeModal();
+        }, 1500);
+    } catch (error) {
+        console.error("Error saving pioneer record: ", error);
+        showNotification('Error saving pioneer record: ' + error.message, 'error');
     }
 }
 
-function handlePublisherSubmit(e) {
+async function handlePublisherSubmit(e) {
     e.preventDefault();
     
     const publisherData = {
@@ -507,34 +515,24 @@ function handlePublisherSubmit(e) {
 
     const userId = currentUser.uid;
     
-    if (editingId) {
-        // Update existing record
-        db.collection('users').doc(userId).collection('publisherRecords').doc(editingId)
-            .update(publisherData)
-            .then(() => {
-                showNotification('Publisher record updated successfully!', 'success');
-                setTimeout(() => {
-                    closeModal();
-                }, 1500);
-            })
-            .catch(error => {
-                showNotification('Error updating publisher record: ' + error.message, 'error');
-                console.error("Error updating publisher record: ", error);
-            });
-    } else {
-        // Add new record
-        db.collection('users').doc(userId).collection('publisherRecords')
-            .add(publisherData)
-            .then(() => {
-                showNotification('Publisher record added successfully!', 'success');
-                setTimeout(() => {
-                    closeModal();
-                }, 1500);
-            })
-            .catch(error => {
-                showNotification('Error adding publisher record: ' + error.message, 'error');
-                console.error("Error adding publisher record: ", error);
-            });
+    try {
+        if (editingId) {
+            // Update existing record
+            await db.collection('users').doc(userId).collection('publisherRecords').doc(editingId)
+                .update(publisherData);
+            showNotification('Publisher record updated successfully!', 'success');
+        } else {
+            // Add new record
+            await db.collection('users').doc(userId).collection('publisherRecords')
+                .add(publisherData);
+            showNotification('Publisher record added successfully!', 'success');
+        }
+        setTimeout(() => {
+            closeModal();
+        }, 1500);
+    } catch (error) {
+        console.error("Error saving publisher record: ", error);
+        showNotification('Error saving publisher record: ' + error.message, 'error');
     }
 }
 
