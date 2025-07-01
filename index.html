@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JW Ministry Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+    <div class="container">
+        <!-- Auth Section -->
+        <div id="auth-section" class="auth-section">
+            <div class="auth-container">
+                <h1>JW Ministry Assistant</h1>
+                <div class="auth-form">
+                    <input type="email" id="email" placeholder="Email" class="auth-input">
+                    <input type="password" id="password" placeholder="Password" class="auth-input">
+                    <button id="login-btn" class="auth-btn">Login</button>
+                    <button id="signup-btn" class="auth-btn auth-btn-secondary">Sign Up</button>
+                    <button id="google-auth-btn" class="auth-btn auth-btn-google">
+                        <i class="fab fa-google"></i> Continue with Google
+                    </button>
+                    <button id="guest-btn" class="auth-btn auth-btn-guest">Continue as Guest</button>
+                    <div id="auth-message" class="auth-message"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main App Section (hidden initially) -->
+        <div id="app-section" class="app-section hidden">
+            <!-- Header -->
+            <header class="app-header">
+                <h1>JW Ministry Assistant</h1>
+                <div class="user-info">
+                    <img id="user-avatar" src="" alt="User Avatar" class="user-avatar">
+                    <span id="user-name" class="user-name"></span>
+                    <button id="logout-btn" class="logout-btn"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </header>
+
+            <!-- Navigation -->
+            <nav class="app-nav">
+                <button class="nav-btn active" data-section="contacts"><i class="fas fa-address-book"></i> Contacts</button>
+                <button class="nav-btn" data-section="pioneer"><i class="fas fa-star"></i> Pioneer</button>
+                <button class="nav-btn" data-section="publisher"><i class="fas fa-user"></i> Publisher</button>
+            </nav>
+
+            <!-- Content Sections -->
+            <div class="content-container">
+                <!-- Contacts Section -->
+                <section id="contacts-section" class="content-section">
+                    <div class="section-header">
+                        <h2>Contacts</h2>
+                        <button id="add-contact-btn" class="add-btn"><i class="fas fa-plus"></i> Add Contact</button>
+                    </div>
+                    <div class="search-container">
+                        <input type="text" id="contact-search" placeholder="Search contacts..." class="search-input">
+                        <button id="contact-search-btn" class="search-btn"><i class="fas fa-search"></i></button>
+                    </div>
+                    <div class="contacts-list" id="contacts-list">
+                        <!-- Contacts will be loaded here -->
+                    </div>
+                </section>
+
+                <!-- Pioneer Section -->
+                <section id="pioneer-section" class="content-section hidden">
+                    <div class="section-header">
+                        <h2>Pioneer Records</h2>
+                        <button id="add-pioneer-btn" class="add-btn"><i class="fas fa-plus"></i> Add Record</button>
+                        <button id="pioneer-stats-btn" class="stats-btn"><i class="fas fa-chart-bar"></i> View Stats</button>
+                    </div>
+                    <div class="search-container">
+                        <input type="text" id="pioneer-search" placeholder="Search records..." class="search-input">
+                        <button id="pioneer-search-btn" class="search-btn"><i class="fas fa-search"></i></button>
+                    </div>
+                    <div class="records-list" id="pioneer-list">
+                        <!-- Pioneer records will be loaded here -->
+                    </div>
+                </section>
+
+                <!-- Publisher Section -->
+                <section id="publisher-section" class="content-section hidden">
+                    <div class="section-header">
+                        <h2>Publisher Records</h2>
+                        <button id="add-publisher-btn" class="add-btn"><i class="fas fa-plus"></i> Add Record</button>
+                        <button id="publisher-stats-btn" class="stats-btn"><i class="fas fa-chart-bar"></i> View Stats</button>
+                    </div>
+                    <div class="search-container">
+                        <input type="text" id="publisher-search" placeholder="Search records..." class="search-input">
+                        <button id="publisher-search-btn" class="search-btn"><i class="fas fa-search"></i></button>
+                    </div>
+                    <div class="records-list" id="publisher-list">
+                        <!-- Publisher records will be loaded here -->
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Modals -->
+        <!-- Contact Modal -->
+        <div id="contact-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-btn">&times;</span>
+                <h2 id="contact-modal-title">Add New Contact</h2>
+                <form id="contact-form">
+                    <input type="text" id="contact-name" placeholder="Name" required>
+                    <input type="tel" id="contact-phone" placeholder="Phone Number">
+                    <input type="text" id="contact-address" placeholder="Address">
+                    <input type="text" id="contact-publication" placeholder="Publication Placed">
+                    <div class="form-group">
+                        <label for="contact-date">Return Visit Date:</label>
+                        <input type="date" id="contact-date">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-time">Return Visit Time:</label>
+                        <input type="time" id="contact-time">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-status">Return Visit Completed:</label>
+                        <select id="contact-status">
+                            <option value="pending">Pending</option>
+                            <option value="completed">Completed</option>
+                            <option value="not-interested">Not Interested</option>
+                        </select>
+                    </div>
+                    <textarea id="contact-notes" placeholder="Additional notes..."></textarea>
+                    <div class="form-buttons">
+                        <button type="submit" class="save-btn">Save</button>
+                        <button type="button" class="cancel-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Pioneer Modal -->
+        <div id="pioneer-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-btn">&times;</span>
+                <h2 id="pioneer-modal-title">Add Pioneer Record</h2>
+                <form id="pioneer-form">
+                    <div class="form-group">
+                        <label for="pioneer-date">Date:</label>
+                        <input type="date" id="pioneer-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="pioneer-hours">Hours:</label>
+                        <input type="number" id="pioneer-hours" min="0" step="0.5" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="pioneer-minutes">Minutes:</label>
+                        <input type="number" id="pioneer-minutes" min="0" max="59">
+                    </div>
+                    <div class="form-group">
+                        <label for="pioneer-studies">Bible Studies Conducted:</label>
+                        <input type="number" id="pioneer-studies" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="pioneer-return-visits">Return Visits:</label>
+                        <input type="number" id="pioneer-return-visits" min="0">
+                    </div>
+                    <textarea id="pioneer-notes" placeholder="Notes about the day..."></textarea>
+                    <div class="form-buttons">
+                        <button type="submit" class="save-btn">Save</button>
+                        <button type="button" class="cancel-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Publisher Modal -->
+        <div id="publisher-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-btn">&times;</span>
+                <h2 id="publisher-modal-title">Add Publisher Record</h2>
+                <form id="publisher-form">
+                    <div class="form-group">
+                        <label for="publisher-date">Date:</label>
+                        <input type="date" id="publisher-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="publisher-studies">Bible Studies Conducted:</label>
+                        <input type="number" id="publisher-studies" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="publisher-participated">Participated in Ministry:</label>
+                        <select id="publisher-participated">
+                            <option value="yes">Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+                    <textarea id="publisher-notes" placeholder="Notes about the day..."></textarea>
+                    <div class="form-buttons">
+                        <button type="submit" class="save-btn">Save</button>
+                        <button type="button" class="cancel-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Stats Modal -->
+        <div id="stats-modal" class="modal hidden">
+            <div class="modal-content stats-content">
+                <span class="close-btn">&times;</span>
+                <h2 id="stats-modal-title">Monthly Statistics</h2>
+                <div class="stats-container" id="stats-container">
+                    <!-- Stats will be loaded here -->
+                </div>
+                <div class="stats-buttons">
+                    <button id="share-whatsapp-btn" class="share-btn"><i class="fab fa-whatsapp"></i> Share via WhatsApp</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase and App Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-firestore-compat.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
