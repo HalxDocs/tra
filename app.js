@@ -1,6 +1,6 @@
-// Firebase Configuration
+// Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyDMNC-oVXg6eCxirQgBIaIAzJijUgBLeP4",
+  apiKey: "AIzaSyDMNC-oVXg6eCxirQgBIaIAzJijUgBLeP4",
   authDomain: "jw-ministry-tracker.firebaseapp.com",
   projectId: "jw-ministry-tracker",
   storageBucket: "jw-ministry-tracker.firebasestorage.app",
@@ -14,743 +14,848 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Global variables
-let currentUser = null;
-let editingContactId = null;
-let editingPioneerRecordId = null;
-let editingPublisherRecordId = null;
-
 // DOM Elements
 const authSection = document.getElementById('auth-section');
 const appSection = document.getElementById('app-section');
-const emailInput = document.getElementById('email');
-const passwordInput = document.getElementById('password');
 const loginBtn = document.getElementById('login-btn');
 const signupBtn = document.getElementById('signup-btn');
 const googleAuthBtn = document.getElementById('google-auth-btn');
 const guestBtn = document.getElementById('guest-btn');
-const authMessage = document.getElementById('auth-message');
 const logoutBtn = document.getElementById('logout-btn');
-const userAvatar = document.getElementById('user-avatar');
+const authMessage = document.getElementById('auth-message');
 const userName = document.getElementById('user-name');
+const userAvatar = document.getElementById('user-avatar');
 
-// Navigation
+// Section navigation
 const navBtns = document.querySelectorAll('.nav-btn');
 const contentSections = document.querySelectorAll('.content-section');
 
-// Contacts
-const contactsList = document.getElementById('contacts-list');
+// Contact elements
+const contactsSection = document.getElementById('contacts-section');
 const addContactBtn = document.getElementById('add-contact-btn');
+const contactSearch = document.getElementById('contact-search');
+const contactsList = document.getElementById('contacts-list');
 const contactModal = document.getElementById('contact-modal');
 const contactForm = document.getElementById('contact-form');
-const contactSearch = document.getElementById('contact-search');
 
-// Pioneer
-const pioneerList = document.getElementById('pioneer-list');
+// Pioneer elements
+const pioneerSection = document.getElementById('pioneer-section');
 const addPioneerBtn = document.getElementById('add-pioneer-btn');
+const pioneerSearch = document.getElementById('pioneer-search');
+const pioneerList = document.getElementById('pioneer-list');
 const pioneerModal = document.getElementById('pioneer-modal');
 const pioneerForm = document.getElementById('pioneer-form');
 const pioneerStatsBtn = document.getElementById('pioneer-stats-btn');
-const pioneerSearch = document.getElementById('pioneer-search');
 
-// Publisher
-const publisherList = document.getElementById('publisher-list');
+// Publisher elements
+const publisherSection = document.getElementById('publisher-section');
 const addPublisherBtn = document.getElementById('add-publisher-btn');
+const publisherSearch = document.getElementById('publisher-search');
+const publisherList = document.getElementById('publisher-list');
 const publisherModal = document.getElementById('publisher-modal');
 const publisherForm = document.getElementById('publisher-form');
 const publisherStatsBtn = document.getElementById('publisher-stats-btn');
-const publisherSearch = document.getElementById('publisher-search');
 
-// Stats Modal
+// Stats modal
 const statsModal = document.getElementById('stats-modal');
 const statsContainer = document.getElementById('stats-container');
-const shareWhatsAppBtn = document.getElementById('share-whatsapp-btn');
+const shareWhatsappBtn = document.getElementById('share-whatsapp-btn');
 
-// Auth State Observer
-auth.onAuthStateChanged((user) => {
-    if (user) {
-        currentUser = user;
-        showApp();
-        updateUserInfo();
-        loadAllData();
-    } else {
-        currentUser = null;
-        showAuth();
+// Close buttons
+const closeBtns = document.querySelectorAll('.close-btn');
+const cancelBtns = document.querySelectorAll('.cancel-btn');
+
+// Notification element
+const notification = document.createElement('div');
+notification.className = 'notification hidden';
+document.body.appendChild(notification);
+
+// Current user and data
+let currentUser = null;
+let currentSection = 'contacts';
+let contacts = [];
+let pioneerRecords = [];
+let publisherRecords = [];
+let editingId = null;
+
+// Initialize the app
+function initApp() {
+    // Check auth state
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            // User is signed in
+            currentUser = user;
+            showAppSection();
+            loadUserData();
+        } else {
+            // No user is signed in
+            currentUser = null;
+            showAuthSection();
+        }
+    });
+
+    // Set up event listeners
+    setupEventListeners();
+}
+
+// Set up all event listeners
+function setupEventListeners() {
+    // Auth buttons
+    loginBtn.addEventListener('click', handleLogin);
+    signupBtn.addEventListener('click', handleSignup);
+    googleAuthBtn.addEventListener('click', handleGoogleAuth);
+    guestBtn.addEventListener('click', handleGuestAuth);
+    logoutBtn.addEventListener('click', handleLogout);
+
+    // Navigation buttons
+    navBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const section = btn.dataset.section;
+            showSection(section);
+        });
+    });
+
+    // Add buttons
+    addContactBtn.addEventListener('click', () => showModal('contact'));
+    addPioneerBtn.addEventListener('click', () => showModal('pioneer'));
+    addPublisherBtn.addEventListener('click', () => showModal('publisher'));
+
+    // Form submissions
+    contactForm.addEventListener('submit', handleContactSubmit);
+    pioneerForm.addEventListener('submit', handlePioneerSubmit);
+    publisherForm.addEventListener('submit', handlePublisherSubmit);
+
+    // Search functionality
+    contactSearch.addEventListener('input', () => filterContacts(contactSearch.value));
+    pioneerSearch.addEventListener('input', () => filterPioneerRecords(pioneerSearch.value));
+    publisherSearch.addEventListener('input', () => filterPublisherRecords(publisherSearch.value));
+
+    // Stats buttons
+    pioneerStatsBtn.addEventListener('click', () => showStats('pioneer'));
+    publisherStatsBtn.addEventListener('click', () => showStats('publisher'));
+    shareWhatsappBtn.addEventListener('click', shareStatsViaWhatsApp);
+
+    // Close modals
+    closeBtns.forEach(btn => {
+        btn.addEventListener('click', closeModal);
+    });
+
+    cancelBtns.forEach(btn => {
+        btn.addEventListener('click', closeModal);
+    });
+
+    // Close modal when clicking outside
+    window.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal')) {
+            closeModal();
+        }
+    });
+}
+
+// Auth handlers
+async function handleLogin() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    try {
+        await auth.signInWithEmailAndPassword(email, password);
+        showNotification('Login successful!', 'success');
+        authMessage.textContent = '';
+    } catch (error) {
+        showNotification(error.message, 'error');
+        authMessage.textContent = error.message;
+        authMessage.style.color = 'red';
     }
-});
+}
 
-// Authentication Functions
-function showAuth() {
+async function handleSignup() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    try {
+        await auth.createUserWithEmailAndPassword(email, password);
+        showNotification('Account created successfully!', 'success');
+        authMessage.textContent = '';
+    } catch (error) {
+        showNotification(error.message, 'error');
+        authMessage.textContent = error.message;
+        authMessage.style.color = 'red';
+    }
+}
+
+async function handleGoogleAuth() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    
+    try {
+        await auth.signInWithPopup(provider);
+        showNotification('Google login successful!', 'success');
+    } catch (error) {
+        showNotification(error.message, 'error');
+        authMessage.textContent = error.message;
+        authMessage.style.color = 'red';
+    }
+}
+
+function handleGuestAuth() {
+    // Sign in anonymously
+    auth.signInAnonymously()
+        .then(() => {
+            showNotification('Guest session started', 'success');
+            authMessage.textContent = '';
+        })
+        .catch(error => {
+            showNotification(error.message, 'error');
+            authMessage.textContent = error.message;
+            authMessage.style.color = 'red';
+        });
+}
+
+function handleLogout() {
+    auth.signOut()
+        .then(() => {
+            showNotification('Logged out successfully', 'success');
+        })
+        .catch(error => {
+            showNotification(error.message, 'error');
+        });
+}
+
+// UI functions
+function showAuthSection() {
     authSection.classList.remove('hidden');
     appSection.classList.add('hidden');
 }
 
-function showApp() {
+function showAppSection() {
     authSection.classList.add('hidden');
     appSection.classList.remove('hidden');
-}
 
-function updateUserInfo() {
+    // Update user info
     if (currentUser) {
         userName.textContent = currentUser.displayName || currentUser.email || 'Guest User';
-        userAvatar.src = currentUser.photoURL || 'https://via.placeholder.com/40x40?text=U';
-        userAvatar.alt = currentUser.displayName || 'User Avatar';
-    }
-}
-
-function showAuthMessage(message, isError = false) {
-    authMessage.textContent = message;
-    authMessage.className = `auth-message ${isError ? 'error' : 'success'}`;
-    setTimeout(() => {
-        authMessage.textContent = '';
-        authMessage.className = 'auth-message';
-    }, 5000);
-}
-
-// Auth Event Listeners
-loginBtn.addEventListener('click', async () => {
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
-
-    if (!email || !password) {
-        showAuthMessage('Please enter both email and password', true);
-        return;
-    }
-
-    try {
-        await auth.signInWithEmailAndPassword(email, password);
-        showAuthMessage('Login successful!');
-    } catch (error) {
-        showAuthMessage(error.message, true);
-    }
-});
-
-signupBtn.addEventListener('click', async () => {
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
-
-    if (!email || !password) {
-        showAuthMessage('Please enter both email and password', true);
-        return;
-    }
-
-    if (password.length < 6) {
-        showAuthMessage('Password must be at least 6 characters long', true);
-        return;
-    }
-
-    try {
-        await auth.createUserWithEmailAndPassword(email, password);
-        showAuthMessage('Account created successfully!');
-    } catch (error) {
-        showAuthMessage(error.message, true);
-    }
-});
-
-googleAuthBtn.addEventListener('click', async () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    try {
-        await auth.signInWithPopup(provider);
-        showAuthMessage('Google login successful!');
-    } catch (error) {
-        showAuthMessage(error.message, true);
-    }
-});
-
-guestBtn.addEventListener('click', async () => {
-    try {
-        await auth.signInAnonymously();
-        showAuthMessage('Logged in as guest!');
-    } catch (error) {
-        showAuthMessage(error.message, true);
-    }
-});
-
-logoutBtn.addEventListener('click', async () => {
-    try {
-        await auth.signOut();
-        showAuthMessage('Logged out successfully!');
-    } catch (error) {
-        showAuthMessage(error.message, true);
-    }
-});
-
-// Navigation
-navBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        const section = btn.dataset.section;
         
-        // Update active nav button
-        navBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        
-        // Show corresponding section
-        contentSections.forEach(s => s.classList.add('hidden'));
-        document.getElementById(`${section}-section`).classList.remove('hidden');
-        
-        // Load data for the section
-        if (section === 'contacts') loadContacts();
-        else if (section === 'pioneer') loadPioneerRecords();
-        else if (section === 'publisher') loadPublisherRecords();
-    });
-});
-
-// Utility Functions
-function getUserRef() {
-    return db.collection('users').doc(currentUser.uid);
-}
-
-function formatDate(date) {
-    return new Date(date).toLocaleDateString();
-}
-
-function formatTime(time) {
-    return new Date(`1970-01-01T${time}`).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-}
-
-// Contacts Functions
-async function loadContacts() {
-    if (!currentUser) return;
-    
-    try {
-        const snapshot = await getUserRef().collection('contacts').orderBy('name').get();
-        displayContacts(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
-    } catch (error) {
-        console.error('Error loading contacts:', error);
-    }
-}
-
-function displayContacts(contacts) {
-    contactsList.innerHTML = '';
-    
-    if (contacts.length === 0) {
-        contactsList.innerHTML = '<div class="empty-state">No contacts found. Add your first contact!</div>';
-        return;
-    }
-    
-    contacts.forEach(contact => {
-        const contactCard = document.createElement('div');
-        contactCard.className = 'contact-card';
-        contactCard.innerHTML = `
-            <div class="contact-info">
-                <h3>${contact.name}</h3>
-                <p><i class="fas fa-phone"></i> ${contact.phone || 'No phone'}</p>
-                <p><i class="fas fa-map-marker-alt"></i> ${contact.address || 'No address'}</p>
-                <p><i class="fas fa-book"></i> ${contact.publication || 'No publication'}</p>
-                ${contact.returnDate ? `<p><i class="fas fa-calendar"></i> Return Visit: ${formatDate(contact.returnDate)} ${contact.returnTime ? 'at ' + formatTime(contact.returnTime) : ''}</p>` : ''}
-                <p><i class="fas fa-flag"></i> Status: <span class="status status-${contact.status || 'pending'}">${contact.status || 'pending'}</span></p>
-                ${contact.notes ? `<p><i class="fas fa-sticky-note"></i> ${contact.notes}</p>` : ''}
-            </div>
-            <div class="contact-actions">
-                <button onclick="editContact('${contact.id}')" class="edit-btn"><i class="fas fa-edit"></i></button>
-                <button onclick="deleteContact('${contact.id}')" class="delete-btn"><i class="fas fa-trash"></i></button>
-            </div>
-        `;
-        contactsList.appendChild(contactCard);
-    });
-}
-
-async function saveContact(contactData) {
-    if (!currentUser) return;
-    
-    try {
-        if (editingContactId) {
-            await getUserRef().collection('contacts').doc(editingContactId).update({
-                ...contactData,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+        if (currentUser.photoURL) {
+            userAvatar.src = currentUser.photoURL;
+            userAvatar.style.display = 'block';
         } else {
-            await getUserRef().collection('contacts').add({
-                ...contactData,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            userAvatar.style.display = 'none';
         }
-        loadContacts();
-    } catch (error) {
-        console.error('Error saving contact:', error);
-        alert('Error saving contact. Please try again.');
     }
 }
 
-async function deleteContact(contactId) {
-    if (!currentUser || !confirm('Are you sure you want to delete this contact?')) return;
-    
-    try {
-        await getUserRef().collection('contacts').doc(contactId).delete();
-        loadContacts();
-    } catch (error) {
-        console.error('Error deleting contact:', error);
-        alert('Error deleting contact. Please try again.');
-    }
+function showSection(section) {
+    // Update active nav button
+    navBtns.forEach(btn => {
+        if (btn.dataset.section === section) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    // Show the selected section
+    contentSections.forEach(sec => {
+        if (sec.id === `${section}-section`) {
+            sec.classList.remove('hidden');
+            currentSection = section;
+        } else {
+            sec.classList.add('hidden');
+        }
+    });
 }
 
-function editContact(contactId) {
-    editingContactId = contactId;
+function showModal(type) {
+    editingId = null;
     
-    getUserRef().collection('contacts').doc(contactId).get().then(doc => {
-        if (doc.exists) {
-            const contact = doc.data();
-            document.getElementById('contact-modal-title').textContent = 'Edit Contact';
-            document.getElementById('contact-name').value = contact.name || '';
-            document.getElementById('contact-phone').value = contact.phone || '';
-            document.getElementById('contact-address').value = contact.address || '';
-            document.getElementById('contact-publication').value = contact.publication || '';
-            document.getElementById('contact-date').value = contact.returnDate || '';
-            document.getElementById('contact-time').value = contact.returnTime || '';
-            document.getElementById('contact-status').value = contact.status || 'pending';
-            document.getElementById('contact-notes').value = contact.notes || '';
+    switch (type) {
+        case 'contact':
+            document.getElementById('contact-modal-title').textContent = 'Add New Contact';
+            contactForm.reset();
             contactModal.classList.remove('hidden');
-        }
-    });
-}
-
-// Pioneer Functions
-async function loadPioneerRecords() {
-    if (!currentUser) return;
-    
-    try {
-        const snapshot = await getUserRef().collection('pioneerRecords').orderBy('date', 'desc').get();
-        displayPioneerRecords(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
-    } catch (error) {
-        console.error('Error loading pioneer records:', error);
-    }
-}
-
-function displayPioneerRecords(records) {
-    pioneerList.innerHTML = '';
-    
-    if (records.length === 0) {
-        pioneerList.innerHTML = '<div class="empty-state">No pioneer records found. Add your first record!</div>';
-        return;
-    }
-    
-    records.forEach(record => {
-        const recordCard = document.createElement('div');
-        recordCard.className = 'record-card';
-        recordCard.innerHTML = `
-            <div class="record-info">
-                <h3>${formatDate(record.date)}</h3>
-                <p><i class="fas fa-clock"></i> Hours: ${record.hours || 0}${record.minutes ? `.${Math.round(record.minutes/60*100)}` : ''}</p>
-                <p><i class="fas fa-book"></i> Bible Studies: ${record.studies || 0}</p>
-                <p><i class="fas fa-redo"></i> Return Visits: ${record.returnVisits || 0}</p>
-                ${record.notes ? `<p><i class="fas fa-sticky-note"></i> ${record.notes}</p>` : ''}
-            </div>
-            <div class="record-actions">
-                <button onclick="editPioneerRecord('${record.id}')" class="edit-btn"><i class="fas fa-edit"></i></button>
-                <button onclick="deletePioneerRecord('${record.id}')" class="delete-btn"><i class="fas fa-trash"></i></button>
-            </div>
-        `;
-        pioneerList.appendChild(recordCard);
-    });
-}
-
-async function savePioneerRecord(recordData) {
-    if (!currentUser) return;
-    
-    try {
-        if (editingPioneerRecordId) {
-            await getUserRef().collection('pioneerRecords').doc(editingPioneerRecordId).update({
-                ...recordData,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        } else {
-            await getUserRef().collection('pioneerRecords').add({
-                ...recordData,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        }
-        loadPioneerRecords();
-    } catch (error) {
-        console.error('Error saving pioneer record:', error);
-        alert('Error saving record. Please try again.');
-    }
-}
-
-async function deletePioneerRecord(recordId) {
-    if (!currentUser || !confirm('Are you sure you want to delete this record?')) return;
-    
-    try {
-        await getUserRef().collection('pioneerRecords').doc(recordId).delete();
-        loadPioneerRecords();
-    } catch (error) {
-        console.error('Error deleting pioneer record:', error);
-        alert('Error deleting record. Please try again.');
-    }
-}
-
-function editPioneerRecord(recordId) {
-    editingPioneerRecordId = recordId;
-    
-    getUserRef().collection('pioneerRecords').doc(recordId).get().then(doc => {
-        if (doc.exists) {
-            const record = doc.data();
-            document.getElementById('pioneer-modal-title').textContent = 'Edit Pioneer Record';
-            document.getElementById('pioneer-date').value = record.date || '';
-            document.getElementById('pioneer-hours').value = record.hours || '';
-            document.getElementById('pioneer-minutes').value = record.minutes || '';
-            document.getElementById('pioneer-studies').value = record.studies || '';
-            document.getElementById('pioneer-return-visits').value = record.returnVisits || '';
-            document.getElementById('pioneer-notes').value = record.notes || '';
+            break;
+        case 'pioneer':
+            document.getElementById('pioneer-modal-title').textContent = 'Add Pioneer Record';
+            pioneerForm.reset();
+            document.getElementById('pioneer-date').valueAsDate = new Date();
             pioneerModal.classList.remove('hidden');
-        }
-    });
-}
-
-// Publisher Functions
-async function loadPublisherRecords() {
-    if (!currentUser) return;
-    
-    try {
-        const snapshot = await getUserRef().collection('publisherRecords').orderBy('date', 'desc').get();
-        displayPublisherRecords(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
-    } catch (error) {
-        console.error('Error loading publisher records:', error);
-    }
-}
-
-function displayPublisherRecords(records) {
-    publisherList.innerHTML = '';
-    
-    if (records.length === 0) {
-        publisherList.innerHTML = '<div class="empty-state">No publisher records found. Add your first record!</div>';
-        return;
-    }
-    
-    records.forEach(record => {
-        const recordCard = document.createElement('div');
-        recordCard.className = 'record-card';
-        recordCard.innerHTML = `
-            <div class="record-info">
-                <h3>${formatDate(record.date)}</h3>
-                <p><i class="fas fa-book"></i> Bible Studies: ${record.studies || 0}</p>
-                <p><i class="fas fa-user-check"></i> Participated: <span class="status status-${record.participated}">${record.participated}</span></p>
-                ${record.notes ? `<p><i class="fas fa-sticky-note"></i> ${record.notes}</p>` : ''}
-            </div>
-            <div class="record-actions">
-                <button onclick="editPublisherRecord('${record.id}')" class="edit-btn"><i class="fas fa-edit"></i></button>
-                <button onclick="deletePublisherRecord('${record.id}')" class="delete-btn"><i class="fas fa-trash"></i></button>
-            </div>
-        `;
-        publisherList.appendChild(recordCard);
-    });
-}
-
-async function savePublisherRecord(recordData) {
-    if (!currentUser) return;
-    
-    try {
-        if (editingPublisherRecordId) {
-            await getUserRef().collection('publisherRecords').doc(editingPublisherRecordId).update({
-                ...recordData,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        } else {
-            await getUserRef().collection('publisherRecords').add({
-                ...recordData,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        }
-        loadPublisherRecords();
-    } catch (error) {
-        console.error('Error saving publisher record:', error);
-        alert('Error saving record. Please try again.');
-    }
-}
-
-async function deletePublisherRecord(recordId) {
-    if (!currentUser || !confirm('Are you sure you want to delete this record?')) return;
-    
-    try {
-        await getUserRef().collection('publisherRecords').doc(recordId).delete();
-        loadPublisherRecords();
-    } catch (error) {
-        console.error('Error deleting publisher record:', error);
-        alert('Error deleting record. Please try again.');
-    }
-}
-
-function editPublisherRecord(recordId) {
-    editingPublisherRecordId = recordId;
-    
-    getUserRef().collection('publisherRecords').doc(recordId).get().then(doc => {
-        if (doc.exists) {
-            const record = doc.data();
-            document.getElementById('publisher-modal-title').textContent = 'Edit Publisher Record';
-            document.getElementById('publisher-date').value = record.date || '';
-            document.getElementById('publisher-studies').value = record.studies || '';
-            document.getElementById('publisher-participated').value = record.participated || 'yes';
-            document.getElementById('publisher-notes').value = record.notes || '';
+            break;
+        case 'publisher':
+            document.getElementById('publisher-modal-title').textContent = 'Add Publisher Record';
+            publisherForm.reset();
+            document.getElementById('publisher-date').valueAsDate = new Date();
             publisherModal.classList.remove('hidden');
-        }
+            break;
+    }
+}
+
+function showEditModal(type, id) {
+    editingId = id;
+    
+    switch (type) {
+        case 'contact':
+            const contact = contacts.find(c => c.id === id);
+            if (contact) {
+                document.getElementById('contact-modal-title').textContent = 'Edit Contact';
+                document.getElementById('contact-name').value = contact.name;
+                document.getElementById('contact-phone').value = contact.phone || '';
+                document.getElementById('contact-address').value = contact.address || '';
+                document.getElementById('contact-publication').value = contact.publication || '';
+                document.getElementById('contact-date').value = contact.visitDate || '';
+                document.getElementById('contact-time').value = contact.visitTime || '';
+                document.getElementById('contact-status').value = contact.status || 'pending';
+                document.getElementById('contact-notes').value = contact.notes || '';
+                contactModal.classList.remove('hidden');
+            }
+            break;
+        case 'pioneer':
+            const pioneerRecord = pioneerRecords.find(r => r.id === id);
+            if (pioneerRecord) {
+                document.getElementById('pioneer-modal-title').textContent = 'Edit Pioneer Record';
+                document.getElementById('pioneer-date').value = pioneerRecord.date;
+                document.getElementById('pioneer-hours').value = pioneerRecord.hours;
+                document.getElementById('pioneer-minutes').value = pioneerRecord.minutes || 0;
+                document.getElementById('pioneer-studies').value = pioneerRecord.studies || 0;
+                document.getElementById('pioneer-return-visits').value = pioneerRecord.returnVisits || 0;
+                document.getElementById('pioneer-notes').value = pioneerRecord.notes || '';
+                pioneerModal.classList.remove('hidden');
+            }
+            break;
+        case 'publisher':
+            const publisherRecord = publisherRecords.find(r => r.id === id);
+            if (publisherRecord) {
+                document.getElementById('publisher-modal-title').textContent = 'Edit Publisher Record';
+                document.getElementById('publisher-date').value = publisherRecord.date;
+                document.getElementById('publisher-studies').value = publisherRecord.studies || 0;
+                document.getElementById('publisher-participated').value = publisherRecord.participated ? 'yes' : 'no';
+                document.getElementById('publisher-notes').value = publisherRecord.notes || '';
+                publisherModal.classList.remove('hidden');
+            }
+            break;
+    }
+}
+
+function closeModal() {
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.classList.add('hidden');
     });
 }
 
-// Statistics Functions
-async function showPioneerStats() {
-    if (!currentUser) return;
+function showNotification(message, type) {
+    notification.textContent = message;
+    notification.className = `notification ${type}`;
+    notification.classList.remove('hidden');
     
-    try {
-        const snapshot = await getUserRef().collection('pioneerRecords').get();
-        const records = snapshot.docs.map(doc => doc.data());
-        
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-        
-        const monthlyRecords = records.filter(record => {
-            const recordDate = new Date(record.date);
-            return recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
-        });
-        
-        const totalHours = monthlyRecords.reduce((sum, record) => {
-            const hours = parseFloat(record.hours || 0);
-            const minutes = parseFloat(record.minutes || 0);
-            return sum + hours + (minutes / 60);
-        }, 0);
-        
-        const totalStudies = monthlyRecords.reduce((sum, record) => sum + parseInt(record.studies || 0), 0);
-        const totalReturnVisits = monthlyRecords.reduce((sum, record) => sum + parseInt(record.returnVisits || 0), 0);
-        
-        const monthName = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        
-        document.getElementById('stats-modal-title').textContent = `Pioneer Stats - ${monthName}`;
-        statsContainer.innerHTML = `
-            <div class="stat-item">
-                <h3>Total Hours</h3>
-                <p class="stat-value">${totalHours.toFixed(1)}</p>
-            </div>
-            <div class="stat-item">
-                <h3>Bible Studies</h3>
-                <p class="stat-value">${totalStudies}</p>
-            </div>
-            <div class="stat-item">
-                <h3>Return Visits</h3>
-                <p class="stat-value">${totalReturnVisits}</p>
-            </div>
-            <div class="stat-item">
-                <h3>Days in Service</h3>
-                <p class="stat-value">${monthlyRecords.length}</p>
-            </div>
-        `;
-        
-        statsModal.classList.remove('hidden');
-    } catch (error) {
-        console.error('Error loading pioneer stats:', error);
-        alert('Error loading statistics. Please try again.');
-    }
+    setTimeout(() => {
+        notification.classList.add('hidden');
+    }, 3000);
 }
 
-async function showPublisherStats() {
+// Data handling functions
+function loadUserData() {
     if (!currentUser) return;
+
+    const userId = currentUser.uid;
     
-    try {
-        const snapshot = await getUserRef().collection('publisherRecords').get();
-        const records = snapshot.docs.map(doc => doc.data());
-        
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-        
-        const monthlyRecords = records.filter(record => {
-            const recordDate = new Date(record.date);
-            return recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
+    // Load contacts
+    db.collection('users').doc(userId).collection('contacts')
+        .orderBy('name')
+        .onSnapshot(snapshot => {
+            contacts = [];
+            snapshot.forEach(doc => {
+                contacts.push({ id: doc.id, ...doc.data() });
+            });
+            renderContacts();
+        }, error => {
+            console.error("Error loading contacts: ", error);
         });
-        
-        const totalStudies = monthlyRecords.reduce((sum, record) => sum + parseInt(record.studies || 0), 0);
-        const participatedCount = monthlyRecords.filter(record => record.participated === 'yes').length;
-        
-        const monthName = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        
-        document.getElementById('stats-modal-title').textContent = `Publisher Stats - ${monthName}`;
-        statsContainer.innerHTML = `
-            <div class="stat-item">
-                <h3>Bible Studies</h3>
-                <p class="stat-value">${totalStudies}</p>
-            </div>
-            <div class="stat-item">
-                <h3>Days Participated</h3>
-                <p class="stat-value">${participatedCount}</p>
-            </div>
-            <div class="stat-item">
-                <h3>Total Records</h3>
-                <p class="stat-value">${monthlyRecords.length}</p>
-            </div>
-        `;
-        
-        statsModal.classList.remove('hidden');
-    } catch (error) {
-        console.error('Error loading publisher stats:', error);
-        alert('Error loading statistics. Please try again.');
-    }
+
+    // Load pioneer records
+    db.collection('users').doc(userId).collection('pioneerRecords')
+        .orderBy('date', 'desc')
+        .onSnapshot(snapshot => {
+            pioneerRecords = [];
+            snapshot.forEach(doc => {
+                pioneerRecords.push({ id: doc.id, ...doc.data() });
+            });
+            renderPioneerRecords();
+        }, error => {
+            console.error("Error loading pioneer records: ", error);
+        });
+
+    // Load publisher records
+    db.collection('users').doc(userId).collection('publisherRecords')
+        .orderBy('date', 'desc')
+        .onSnapshot(snapshot => {
+            publisherRecords = [];
+            snapshot.forEach(doc => {
+                publisherRecords.push({ id: doc.id, ...doc.data() });
+            });
+            renderPublisherRecords();
+        }, error => {
+            console.error("Error loading publisher records: ", error);
+        });
 }
 
-// Load all data when user logs in
-async function loadAllData() {
-    loadContacts();
-    loadPioneerRecords();
-    loadPublisherRecords();
-}
-
-// Event Listeners for modals and forms
-addContactBtn.addEventListener('click', () => {
-    editingContactId = null;
-    document.getElementById('contact-modal-title').textContent = 'Add New Contact';
-    contactForm.reset();
-    contactModal.classList.remove('hidden');
-});
-
-addPioneerBtn.addEventListener('click', () => {
-    editingPioneerRecordId = null;
-    document.getElementById('pioneer-modal-title').textContent = 'Add Pioneer Record';
-    pioneerForm.reset();
-    pioneerModal.classList.remove('hidden');
-});
-
-addPublisherBtn.addEventListener('click', () => {
-    editingPublisherRecordId = null;
-    document.getElementById('publisher-modal-title').textContent = 'Add Publisher Record';
-    publisherForm.reset();
-    publisherModal.classList.remove('hidden');
-});
-
-pioneerStatsBtn.addEventListener('click', showPioneerStats);
-publisherStatsBtn.addEventListener('click', showPublisherStats);
-
-// Form submissions
-contactForm.addEventListener('submit', (e) => {
+// Form handlers
+function handleContactSubmit(e) {
     e.preventDefault();
     
     const contactData = {
-        name: document.getElementById('contact-name').value.trim(),
-        phone: document.getElementById('contact-phone').value.trim(),
-        address: document.getElementById('contact-address').value.trim(),
-        publication: document.getElementById('contact-publication').value.trim(),
-        returnDate: document.getElementById('contact-date').value,
-        returnTime: document.getElementById('contact-time').value,
+        name: document.getElementById('contact-name').value,
+        phone: document.getElementById('contact-phone').value,
+        address: document.getElementById('contact-address').value,
+        publication: document.getElementById('contact-publication').value,
+        visitDate: document.getElementById('contact-date').value,
+        visitTime: document.getElementById('contact-time').value,
         status: document.getElementById('contact-status').value,
-        notes: document.getElementById('contact-notes').value.trim()
+        notes: document.getElementById('contact-notes').value,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
-    
-    if (!contactData.name) {
-        alert('Please enter a name for the contact.');
-        return;
-    }
-    
-    saveContact(contactData);
-    contactModal.classList.add('hidden');
-    editingContactId = null;
-});
 
-pioneerForm.addEventListener('submit', (e) => {
+    const userId = currentUser.uid;
+    
+    if (editingId) {
+        // Update existing contact
+        db.collection('users').doc(userId).collection('contacts').doc(editingId)
+            .update(contactData)
+            .then(() => {
+                showNotification('Contact updated successfully!', 'success');
+                setTimeout(() => {
+                    closeModal();
+                }, 1500);
+            })
+            .catch(error => {
+                showNotification('Error updating contact: ' + error.message, 'error');
+                console.error("Error updating contact: ", error);
+            });
+    } else {
+        // Add new contact
+        db.collection('users').doc(userId).collection('contacts')
+            .add(contactData)
+            .then(() => {
+                showNotification('Contact added successfully!', 'success');
+                setTimeout(() => {
+                    closeModal();
+                }, 1500);
+            })
+            .catch(error => {
+                showNotification('Error adding contact: ' + error.message, 'error');
+                console.error("Error adding contact: ", error);
+            });
+    }
+}
+
+function handlePioneerSubmit(e) {
     e.preventDefault();
     
-    const recordData = {
+    const pioneerData = {
         date: document.getElementById('pioneer-date').value,
-        hours: parseFloat(document.getElementById('pioneer-hours').value) || 0,
+        hours: parseFloat(document.getElementById('pioneer-hours').value),
         minutes: parseInt(document.getElementById('pioneer-minutes').value) || 0,
         studies: parseInt(document.getElementById('pioneer-studies').value) || 0,
         returnVisits: parseInt(document.getElementById('pioneer-return-visits').value) || 0,
-        notes: document.getElementById('pioneer-notes').value.trim()
+        notes: document.getElementById('pioneer-notes').value,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
-    
-    if (!recordData.date) {
-        alert('Please select a date for the record.');
-        return;
-    }
-    
-    savePioneerRecord(recordData);
-    pioneerModal.classList.add('hidden');
-    editingPioneerRecordId = null;
-});
 
-publisherForm.addEventListener('submit', (e) => {
+    const userId = currentUser.uid;
+    
+    if (editingId) {
+        // Update existing record
+        db.collection('users').doc(userId).collection('pioneerRecords').doc(editingId)
+            .update(pioneerData)
+            .then(() => {
+                showNotification('Pioneer record updated successfully!', 'success');
+                setTimeout(() => {
+                    closeModal();
+                }, 1500);
+            })
+            .catch(error => {
+                showNotification('Error updating pioneer record: ' + error.message, 'error');
+                console.error("Error updating pioneer record: ", error);
+            });
+    } else {
+        // Add new record
+        db.collection('users').doc(userId).collection('pioneerRecords')
+            .add(pioneerData)
+            .then(() => {
+                showNotification('Pioneer record added successfully!', 'success');
+                setTimeout(() => {
+                    closeModal();
+                }, 1500);
+            })
+            .catch(error => {
+                showNotification('Error adding pioneer record: ' + error.message, 'error');
+                console.error("Error adding pioneer record: ", error);
+            });
+    }
+}
+
+function handlePublisherSubmit(e) {
     e.preventDefault();
     
-    const recordData = {
+    const publisherData = {
         date: document.getElementById('publisher-date').value,
         studies: parseInt(document.getElementById('publisher-studies').value) || 0,
-        participated: document.getElementById('publisher-participated').value,
-        notes: document.getElementById('publisher-notes').value.trim()
+        participated: document.getElementById('publisher-participated').value === 'yes',
+        notes: document.getElementById('publisher-notes').value,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
+
+    const userId = currentUser.uid;
     
-    if (!recordData.date) {
-        alert('Please select a date for the record.');
+    if (editingId) {
+        // Update existing record
+        db.collection('users').doc(userId).collection('publisherRecords').doc(editingId)
+            .update(publisherData)
+            .then(() => {
+                showNotification('Publisher record updated successfully!', 'success');
+                setTimeout(() => {
+                    closeModal();
+                }, 1500);
+            })
+            .catch(error => {
+                showNotification('Error updating publisher record: ' + error.message, 'error');
+                console.error("Error updating publisher record: ", error);
+            });
+    } else {
+        // Add new record
+        db.collection('users').doc(userId).collection('publisherRecords')
+            .add(publisherData)
+            .then(() => {
+                showNotification('Publisher record added successfully!', 'success');
+                setTimeout(() => {
+                    closeModal();
+                }, 1500);
+            })
+            .catch(error => {
+                showNotification('Error adding publisher record: ' + error.message, 'error');
+                console.error("Error adding publisher record: ", error);
+            });
+    }
+}
+
+// Render functions
+function renderContacts(filteredContacts = null) {
+    const dataToRender = filteredContacts || contacts;
+    
+    if (dataToRender.length === 0) {
+        contactsList.innerHTML = '<p class="no-data">No contacts found. Add your first contact!</p>';
+        return;
+    }
+
+    contactsList.innerHTML = '';
+    
+    dataToRender.forEach(contact => {
+        const contactEl = document.createElement('div');
+        contactEl.className = 'contact-item';
+        contactEl.innerHTML = `
+            <div class="contact-info">
+                <h3>${contact.name}</h3>
+                ${contact.phone ? `<p><i class="fas fa-phone"></i> ${contact.phone}</p>` : ''}
+                ${contact.address ? `<p><i class="fas fa-map-marker-alt"></i> ${contact.address}</p>` : ''}
+                ${contact.publication ? `<p><i class="fas fa-book"></i> ${contact.publication}</p>` : ''}
+                ${contact.visitDate ? `<p><i class="far fa-calendar-alt"></i> ${formatDate(contact.visitDate)} ${contact.visitTime ? `at ${contact.visitTime}` : ''}</p>` : ''}
+                ${contact.status ? `<p class="status ${contact.status}"><i class="fas fa-circle"></i> ${formatStatus(contact.status)}</p>` : ''}
+                ${contact.notes ? `<p class="notes"><i class="fas fa-sticky-note"></i> ${contact.notes}</p>` : ''}
+            </div>
+            <div class="contact-actions">
+                <button class="edit-btn" data-id="${contact.id}"><i class="fas fa-edit"></i></button>
+                <button class="delete-btn" data-id="${contact.id}"><i class="fas fa-trash"></i></button>
+            </div>
+        `;
+        
+        contactsList.appendChild(contactEl);
+    });
+
+    // Add event listeners to action buttons
+    document.querySelectorAll('.contact-actions .edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => showEditModal('contact', btn.dataset.id));
+    });
+
+    document.querySelectorAll('.contact-actions .delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteRecord('contact', btn.dataset.id));
+    });
+}
+
+function renderPioneerRecords(filteredRecords = null) {
+    const dataToRender = filteredRecords || pioneerRecords;
+    
+    if (dataToRender.length === 0) {
+        pioneerList.innerHTML = '<p class="no-data">No pioneer records found. Add your first record!</p>';
+        return;
+    }
+
+    pioneerList.innerHTML = '';
+    
+    dataToRender.forEach(record => {
+        const totalMinutes = (record.hours * 60) + (record.minutes || 0);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        
+        const recordEl = document.createElement('div');
+        recordEl.className = 'record-item';
+        recordEl.innerHTML = `
+            <div class="record-info">
+                <h3>${formatDate(record.date)}</h3>
+                <p><i class="fas fa-clock"></i> Time: ${hours}h ${minutes}m</p>
+                ${record.studies ? `<p><i class="fas fa-book-open"></i> Studies: ${record.studies}</p>` : ''}
+                ${record.returnVisits ? `<p><i class="fas fa-undo"></i> Return Visits: ${record.returnVisits}</p>` : ''}
+                ${record.notes ? `<p class="notes"><i class="fas fa-sticky-note"></i> ${record.notes}</p>` : ''}
+            </div>
+            <div class="record-actions">
+                <button class="edit-btn" data-id="${record.id}"><i class="fas fa-edit"></i></button>
+                <button class="delete-btn" data-id="${record.id}"><i class="fas fa-trash"></i></button>
+            </div>
+        `;
+        
+        pioneerList.appendChild(recordEl);
+    });
+
+    // Add event listeners to action buttons
+    document.querySelectorAll('.record-actions .edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => showEditModal('pioneer', btn.dataset.id));
+    });
+
+    document.querySelectorAll('.record-actions .delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteRecord('pioneer', btn.dataset.id));
+    });
+}
+
+function renderPublisherRecords(filteredRecords = null) {
+    const dataToRender = filteredRecords || publisherRecords;
+    
+    if (dataToRender.length === 0) {
+        publisherList.innerHTML = '<p class="no-data">No publisher records found. Add your first record!</p>';
+        return;
+    }
+
+    publisherList.innerHTML = '';
+    
+    dataToRender.forEach(record => {
+        const recordEl = document.createElement('div');
+        recordEl.className = 'record-item';
+        recordEl.innerHTML = `
+            <div class="record-info">
+                <h3>${formatDate(record.date)}</h3>
+                <p><i class="fas fa-check-circle"></i> Participated: ${record.participated ? 'Yes' : 'No'}</p>
+                ${record.studies ? `<p><i class="fas fa-book-open"></i> Studies: ${record.studies}</p>` : ''}
+                ${record.notes ? `<p class="notes"><i class="fas fa-sticky-note"></i> ${record.notes}</p>` : ''}
+            </div>
+            <div class="record-actions">
+                <button class="edit-btn" data-id="${record.id}"><i class="fas fa-edit"></i></button>
+                <button class="delete-btn" data-id="${record.id}"><i class="fas fa-trash"></i></button>
+            </div>
+        `;
+        
+        publisherList.appendChild(recordEl);
+    });
+
+    // Add event listeners to action buttons
+    document.querySelectorAll('.record-actions .edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => showEditModal('publisher', btn.dataset.id));
+    });
+
+    document.querySelectorAll('.record-actions .delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteRecord('publisher', btn.dataset.id));
+    });
+}
+
+// Filter functions
+function filterContacts(searchTerm) {
+    if (!searchTerm) {
+        renderContacts();
         return;
     }
     
-    savePublisherRecord(recordData);
-    publisherModal.classList.add('hidden');
-    editingPublisherRecordId = null;
-});
+    const filtered = contacts.filter(contact => 
+        contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (contact.phone && contact.phone.includes(searchTerm)) ||
+        (contact.address && contact.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (contact.publication && contact.publication.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+    
+    renderContacts(filtered);
+}
 
-// Close modals
-document.querySelectorAll('.close-btn, .cancel-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        const modal = e.target.closest('.modal');
-        if (modal) {
-            modal.classList.add('hidden');
-            editingContactId = null;
-            editingPioneerRecordId = null;
-            editingPublisherRecordId = null;
-        }
-    });
-});
-
-// Close modal when clicking outside
-window.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal')) {
-        e.target.classList.add('hidden');
-        editingContactId = null;
-        editingPioneerRecordId = null;
-        editingPublisherRecordId = null;
+function filterPioneerRecords(searchTerm) {
+    if (!searchTerm) {
+        renderPioneerRecords();
+        return;
     }
-});
-
-// Search functionality
-contactSearch.addEventListener('input', (e) => {
-    const searchTerm = e.target.value.toLowerCase();
-    const contactCards = document.querySelectorAll('.contact-card');
     
-    contactCards.forEach(card => {
-        const text = card.textContent.toLowerCase();
-        card.style.display = text.includes(searchTerm) ? 'block' : 'none';
-    });
-});
-
-pioneerSearch.addEventListener('input', (e) => {
-    const searchTerm = e.target.value.toLowerCase();
-    const recordCards = document.querySelectorAll('#pioneer-list .record-card');
+    const filtered = pioneerRecords.filter(record => 
+        formatDate(record.date).includes(searchTerm) ||
+        (record.notes && record.notes.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
     
-    recordCards.forEach(card => {
-        const text = card.textContent.toLowerCase();
-        card.style.display = text.includes(searchTerm) ? 'block' : 'none';
-    });
-});
+    renderPioneerRecords(filtered);
+}
 
-publisherSearch.addEventListener('input', (e) => {
-    const searchTerm = e.target.value.toLowerCase();
-    const recordCards = document.querySelectorAll('#publisher-list .record-card');
+function filterPublisherRecords(searchTerm) {
+    if (!searchTerm) {
+        renderPublisherRecords();
+        return;
+    }
     
-    recordCards.forEach(card => {
-        const text = card.textContent.toLowerCase();
-        card.style.display = text.includes(searchTerm) ? 'block' : 'none';
+    const filtered = publisherRecords.filter(record => 
+        formatDate(record.date).includes(searchTerm) ||
+        (record.notes && record.notes.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+    
+    renderPublisherRecords(filtered);
+}
+
+// Delete record
+function deleteRecord(type, id) {
+    if (!confirm('Are you sure you want to delete this record?')) return;
+    
+    const userId = currentUser.uid;
+    let collectionName = '';
+    
+    switch (type) {
+        case 'contact':
+            collectionName = 'contacts';
+            break;
+        case 'pioneer':
+            collectionName = 'pioneerRecords';
+            break;
+        case 'publisher':
+            collectionName = 'publisherRecords';
+            break;
+    }
+    
+    db.collection('users').doc(userId).collection(collectionName).doc(id).delete()
+        .then(() => {
+            showNotification(`${type.charAt(0).toUpperCase() + type.slice(1)} record deleted`, 'success');
+        })
+        .catch(error => {
+            showNotification(`Error deleting ${type} record: ${error.message}`, 'error');
+            console.error(`Error deleting ${type} record: `, error);
+        });
+}
+
+// Stats functions
+function showStats(type) {
+    const records = type === 'pioneer' ? pioneerRecords : publisherRecords;
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    // Filter records for current month
+    const monthlyRecords = records.filter(record => {
+        const recordDate = new Date(record.date);
+        return recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
     });
-});
+    
+    // Calculate stats
+    let statsHTML = '';
+    
+    if (type === 'pioneer') {
+        let totalHours = 0;
+        let totalMinutes = 0;
+        let totalStudies = 0;
+        let totalReturnVisits = 0;
+        let daysInService = 0;
+        
+        monthlyRecords.forEach(record => {
+            totalHours += record.hours || 0;
+            totalMinutes += record.minutes || 0;
+            totalStudies += record.studies || 0;
+            totalReturnVisits += record.returnVisits || 0;
+            daysInService++;
+        });
+        
+        // Convert extra minutes to hours
+        totalHours += Math.floor(totalMinutes / 60);
+        totalMinutes = totalMinutes % 60;
+        
+        statsHTML = `
+            <h3>Pioneer Statistics for ${currentDate.toLocaleString('default', { month: 'long' })} ${currentYear}</h3>
+            <div class="stat-item">
+                <span class="stat-label">Total Hours:</span>
+                <span class="stat-value">${totalHours}h ${totalMinutes}m</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Average Daily Hours:</span>
+                <span class="stat-value">${daysInService > 0 ? (totalHours / daysInService).toFixed(1) : 0}h</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Bible Studies:</span>
+                <span class="stat-value">${totalStudies}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Return Visits:</span>
+                <span class="stat-value">${totalReturnVisits}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Days in Service:</span>
+                <span class="stat-value">${daysInService}</span>
+            </div>
+        `;
+    } else {
+        let totalStudies = 0;
+        let daysParticipated = 0;
+        let totalDays = monthlyRecords.length;
+        
+        monthlyRecords.forEach(record => {
+            totalStudies += record.studies || 0;
+            if (record.participated) daysParticipated++;
+        });
+        
+        statsHTML = `
+            <h3>Publisher Statistics for ${currentDate.toLocaleString('default', { month: 'long' })} ${currentYear}</h3>
+            <div class="stat-item">
+                <span class="stat-label">Bible Studies:</span>
+                <span class="stat-value">${totalStudies}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Days Participated:</span>
+                <span class="stat-value">${daysParticipated} of ${totalDays}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Participation Rate:</span>
+                <span class="stat-value">${totalDays > 0 ? Math.round((daysParticipated / totalDays) * 100) : 0}%</span>
+            </div>
+        `;
+    }
+    
+    document.getElementById('stats-modal-title').textContent = `${type === 'pioneer' ? 'Pioneer' : 'Publisher'} Statistics`;
+    statsContainer.innerHTML = statsHTML;
+    statsModal.classList.remove('hidden');
+}
 
-// WhatsApp sharing
-shareWhatsAppBtn.addEventListener('click', () => {
-    const statsText = statsContainer.textContent.replace(/\s+/g, ' ').trim();
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(statsText)}`;
-    window.open(whatsappUrl, '_blank');
-});
+function shareStatsViaWhatsApp() {
+    const statsText = statsContainer.innerText;
+    const shareText = `My Ministry Statistics:\n\n${statsText}\n\nShared via JW Ministry Assistant`;
+    const encodedText = encodeURIComponent(shareText);
+    window.open(`https://wa.me/?text=${encodedText}`, '_blank');
+}
 
-// Initialize the app
-document.addEventListener('DOMContentLoaded', () => {
-    // Set default date to today for forms
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('pioneer-date').value = today;
-    document.getElementById('publisher-date').value = today;
-});
+// Helper functions
+function formatDate(dateString) {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+    });
+}
 
-console.log('JW Ministry Assistant loaded successfully!');
+function formatStatus(status) {
+    const statusMap = {
+        'pending': 'Pending',
+        'completed': 'Completed',
+        'not-interested': 'Not Interested'
+    };
+    
+    return statusMap[status] || status;
+}
+
+// Initialize the app when DOM is loaded
+document.addEventListener('DOMContentLoaded', initApp);
