@@ -1,12 +1,11 @@
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDMNC-oVXg6eCxirQgBIaIAzJijUgBLeP4",
-  authDomain: "jw-ministry-tracker.firebaseapp.com",
-  projectId: "jw-ministry-tracker",
-  storageBucket: "jw-ministry-tracker.firebasestorage.app",
-  messagingSenderId: "920829084379",
-  appId: "1:920829084379:web:afce3269d46113c398c2fe",
-  measurementId: "G-RM916N5WTX"
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
 };
 
 // Initialize Firebase
@@ -64,6 +63,11 @@ const shareWhatsappBtn = document.getElementById('share-whatsapp-btn');
 // Close buttons
 const closeBtns = document.querySelectorAll('.close-btn');
 const cancelBtns = document.querySelectorAll('.cancel-btn');
+
+// Notification elements
+const notification = document.createElement('div');
+notification.className = 'notification hidden';
+document.body.appendChild(notification);
 
 // Current user and data
 let currentUser = null;
@@ -154,8 +158,10 @@ async function handleLogin() {
 
     try {
         await auth.signInWithEmailAndPassword(email, password);
+        showNotification('Login successful!', 'success');
         authMessage.textContent = '';
     } catch (error) {
+        showNotification(error.message, 'error');
         authMessage.textContent = error.message;
         authMessage.style.color = 'red';
     }
@@ -167,8 +173,10 @@ async function handleSignup() {
 
     try {
         await auth.createUserWithEmailAndPassword(email, password);
+        showNotification('Account created successfully!', 'success');
         authMessage.textContent = '';
     } catch (error) {
+        showNotification(error.message, 'error');
         authMessage.textContent = error.message;
         authMessage.style.color = 'red';
     }
@@ -179,7 +187,9 @@ async function handleGoogleAuth() {
     
     try {
         await auth.signInWithPopup(provider);
+        showNotification('Google login successful!', 'success');
     } catch (error) {
+        showNotification(error.message, 'error');
         authMessage.textContent = error.message;
         authMessage.style.color = 'red';
     }
@@ -189,16 +199,24 @@ function handleGuestAuth() {
     // Sign in anonymously
     auth.signInAnonymously()
         .then(() => {
+            showNotification('Guest session started', 'success');
             authMessage.textContent = '';
         })
         .catch(error => {
+            showNotification(error.message, 'error');
             authMessage.textContent = error.message;
             authMessage.style.color = 'red';
         });
 }
 
 function handleLogout() {
-    auth.signOut();
+    auth.signOut()
+        .then(() => {
+            showNotification('Logged out successfully', 'success');
+        })
+        .catch(error => {
+            showNotification(error.message, 'error');
+        });
 }
 
 // UI functions
@@ -321,6 +339,16 @@ function closeModal() {
     });
 }
 
+function showNotification(message, type) {
+    notification.textContent = message;
+    notification.className = `notification ${type}`;
+    notification.classList.remove('hidden');
+    
+    setTimeout(() => {
+        notification.classList.add('hidden');
+    }, 3000);
+}
+
 // Data handling functions
 function loadUserData() {
     if (!currentUser) return;
@@ -336,6 +364,8 @@ function loadUserData() {
                 contacts.push({ id: doc.id, ...doc.data() });
             });
             renderContacts();
+        }, error => {
+            console.error("Error loading contacts: ", error);
         });
 
     // Load pioneer records
@@ -347,6 +377,8 @@ function loadUserData() {
                 pioneerRecords.push({ id: doc.id, ...doc.data() });
             });
             renderPioneerRecords();
+        }, error => {
+            console.error("Error loading pioneer records: ", error);
         });
 
     // Load publisher records
@@ -358,6 +390,8 @@ function loadUserData() {
                 publisherRecords.push({ id: doc.id, ...doc.data() });
             });
             renderPublisherRecords();
+        }, error => {
+            console.error("Error loading publisher records: ", error);
         });
 }
 
@@ -374,7 +408,8 @@ function handleContactSubmit(e) {
         visitTime: document.getElementById('contact-time').value,
         status: document.getElementById('contact-status').value,
         notes: document.getElementById('contact-notes').value,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
     const userId = currentUser.uid;
@@ -384,9 +419,11 @@ function handleContactSubmit(e) {
         db.collection('users').doc(userId).collection('contacts').doc(editingId)
             .update(contactData)
             .then(() => {
+                showNotification('Contact updated successfully!', 'success');
                 closeModal();
             })
             .catch(error => {
+                showNotification('Error updating contact: ' + error.message, 'error');
                 console.error("Error updating contact: ", error);
             });
     } else {
@@ -394,9 +431,11 @@ function handleContactSubmit(e) {
         db.collection('users').doc(userId).collection('contacts')
             .add(contactData)
             .then(() => {
+                showNotification('Contact added successfully!', 'success');
                 closeModal();
             })
             .catch(error => {
+                showNotification('Error adding contact: ' + error.message, 'error');
                 console.error("Error adding contact: ", error);
             });
     }
@@ -412,7 +451,8 @@ function handlePioneerSubmit(e) {
         studies: parseInt(document.getElementById('pioneer-studies').value) || 0,
         returnVisits: parseInt(document.getElementById('pioneer-return-visits').value) || 0,
         notes: document.getElementById('pioneer-notes').value,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
     const userId = currentUser.uid;
@@ -422,9 +462,11 @@ function handlePioneerSubmit(e) {
         db.collection('users').doc(userId).collection('pioneerRecords').doc(editingId)
             .update(pioneerData)
             .then(() => {
+                showNotification('Pioneer record updated successfully!', 'success');
                 closeModal();
             })
             .catch(error => {
+                showNotification('Error updating pioneer record: ' + error.message, 'error');
                 console.error("Error updating pioneer record: ", error);
             });
     } else {
@@ -432,9 +474,11 @@ function handlePioneerSubmit(e) {
         db.collection('users').doc(userId).collection('pioneerRecords')
             .add(pioneerData)
             .then(() => {
+                showNotification('Pioneer record added successfully!', 'success');
                 closeModal();
             })
             .catch(error => {
+                showNotification('Error adding pioneer record: ' + error.message, 'error');
                 console.error("Error adding pioneer record: ", error);
             });
     }
@@ -448,7 +492,8 @@ function handlePublisherSubmit(e) {
         studies: parseInt(document.getElementById('publisher-studies').value) || 0,
         participated: document.getElementById('publisher-participated').value === 'yes',
         notes: document.getElementById('publisher-notes').value,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
     const userId = currentUser.uid;
@@ -458,9 +503,11 @@ function handlePublisherSubmit(e) {
         db.collection('users').doc(userId).collection('publisherRecords').doc(editingId)
             .update(publisherData)
             .then(() => {
+                showNotification('Publisher record updated successfully!', 'success');
                 closeModal();
             })
             .catch(error => {
+                showNotification('Error updating publisher record: ' + error.message, 'error');
                 console.error("Error updating publisher record: ", error);
             });
     } else {
@@ -468,9 +515,11 @@ function handlePublisherSubmit(e) {
         db.collection('users').doc(userId).collection('publisherRecords')
             .add(publisherData)
             .then(() => {
+                showNotification('Publisher record added successfully!', 'success');
                 closeModal();
             })
             .catch(error => {
+                showNotification('Error adding publisher record: ' + error.message, 'error');
                 console.error("Error adding publisher record: ", error);
             });
     }
@@ -667,7 +716,11 @@ function deleteRecord(type, id) {
     }
     
     db.collection('users').doc(userId).collection(collectionName).doc(id).delete()
+        .then(() => {
+            showNotification(`${type.charAt(0).toUpperCase() + type.slice(1)} record deleted`, 'success');
+        })
         .catch(error => {
+            showNotification(`Error deleting ${type} record: ${error.message}`, 'error');
             console.error(`Error deleting ${type} record: `, error);
         });
 }
