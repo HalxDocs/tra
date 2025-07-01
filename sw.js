@@ -49,9 +49,14 @@ self.addEventListener('fetch', event => {
               
             return response;
           }
-        );
+        ).catch(() => {
+          // If fetch fails and this is a document request, return the offline page
+          if (event.request.headers.get('accept').includes('text/html')) {
+            return caches.match('/offline.html');
+          }
+        });
       })
-    );
+  );
 });
 
 self.addEventListener('activate', event => {
