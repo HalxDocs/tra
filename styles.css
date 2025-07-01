@@ -649,3 +649,81 @@ textarea {
     font-size: 1.2rem;
     margin-left: auto;
 }
+/* Notification Styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 5px;
+    color: white;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.notification.success {
+    background-color: #2ecc71;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.notification.error {
+    background-color: #e74c3c;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* No data message */
+.no-data {
+    text-align: center;
+    color: #7f8c8d;
+    padding: 20px;
+    font-style: italic;
+}
+
+/* Stats modal styles */
+.stats-content {
+    max-width: 500px;
+    width: 90%;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.stat-label {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.stat-value {
+    font-weight: 700;
+    color: #3498db;
+}
+
+.share-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 20px;
+    background-color: #25D366;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.share-btn:hover {
+    background-color: #128C7E;
+}
