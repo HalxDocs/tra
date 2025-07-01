@@ -1,11 +1,12 @@
 // Firebase configuration
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyDMNC-oVXg6eCxirQgBIaIAzJijUgBLeP4",
+  authDomain: "jw-ministry-tracker.firebaseapp.com",
+  projectId: "jw-ministry-tracker",
+  storageBucket: "jw-ministry-tracker.firebasestorage.app",
+  messagingSenderId: "920829084379",
+  appId: "1:920829084379:web:afce3269d46113c398c2fe",
+  measurementId: "G-RM916N5WTX"
 };
 
 // Initialize Firebase
