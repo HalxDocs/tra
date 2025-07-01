@@ -65,7 +65,7 @@ const shareWhatsappBtn = document.getElementById('share-whatsapp-btn');
 const closeBtns = document.querySelectorAll('.close-btn');
 const cancelBtns = document.querySelectorAll('.cancel-btn');
 
-// Notification elements
+// Notification element
 const notification = document.createElement('div');
 notification.className = 'notification hidden';
 document.body.appendChild(notification);
@@ -421,7 +421,9 @@ function handleContactSubmit(e) {
             .update(contactData)
             .then(() => {
                 showNotification('Contact updated successfully!', 'success');
-                closeModal();
+                setTimeout(() => {
+                    closeModal();
+                }, 1500);
             })
             .catch(error => {
                 showNotification('Error updating contact: ' + error.message, 'error');
@@ -433,7 +435,9 @@ function handleContactSubmit(e) {
             .add(contactData)
             .then(() => {
                 showNotification('Contact added successfully!', 'success');
-                closeModal();
+                setTimeout(() => {
+                    closeModal();
+                }, 1500);
             })
             .catch(error => {
                 showNotification('Error adding contact: ' + error.message, 'error');
@@ -464,7 +468,9 @@ function handlePioneerSubmit(e) {
             .update(pioneerData)
             .then(() => {
                 showNotification('Pioneer record updated successfully!', 'success');
-                closeModal();
+                setTimeout(() => {
+                    closeModal();
+                }, 1500);
             })
             .catch(error => {
                 showNotification('Error updating pioneer record: ' + error.message, 'error');
@@ -476,7 +482,9 @@ function handlePioneerSubmit(e) {
             .add(pioneerData)
             .then(() => {
                 showNotification('Pioneer record added successfully!', 'success');
-                closeModal();
+                setTimeout(() => {
+                    closeModal();
+                }, 1500);
             })
             .catch(error => {
                 showNotification('Error adding pioneer record: ' + error.message, 'error');
@@ -505,7 +513,9 @@ function handlePublisherSubmit(e) {
             .update(publisherData)
             .then(() => {
                 showNotification('Publisher record updated successfully!', 'success');
-                closeModal();
+                setTimeout(() => {
+                    closeModal();
+                }, 1500);
             })
             .catch(error => {
                 showNotification('Error updating publisher record: ' + error.message, 'error');
@@ -517,7 +527,9 @@ function handlePublisherSubmit(e) {
             .add(publisherData)
             .then(() => {
                 showNotification('Publisher record added successfully!', 'success');
-                closeModal();
+                setTimeout(() => {
+                    closeModal();
+                }, 1500);
             })
             .catch(error => {
                 showNotification('Error adding publisher record: ' + error.message, 'error');
